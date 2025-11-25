@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}CouchCraft AI Front Page{% endblock title %}
+
+{% block content %}
+<!-- Welcome Section -->
+<section class="bg-dark text-white text-center py-5">
+  <div class="container">
+    <h1 class="display-4">Welcome to CouchCraft AI!</h1>
+    <p class="lead">Craft your own comfort.</p>
+  </div>
+</section>
+
+<!-- About Us Section -->
+<section class="py-5 bg-light">
+  <div class="container">
+    <h2 class="text-center mb-4">Who We Are</h2>
+    <p class="text-center">
+      In this site you can generate images with AI and train your own LoRA models to personalize your creations. Unleash your creativity and bring your ideas to life with CouchCraft AI!
+    </p>
+  </div>
+</section>
+
+<!-- Login / Register Section -->
+<section class="py-5 text-center">
+  <div class="container">
+    <h2 class="mb-4">Join Us</h2>
+    <div class="d-flex justify-content-center gap-3">
+      <a href="{% url 'login' %}" class="btn btn-primary btn-lg">Generate your image</a>
+      <a href="{% url 'register' %}" class="btn btn-outline-primary btn-lg">Train your Lora</a>
+    </div>
+  </div>
+</section>
+{% endblock content %}
