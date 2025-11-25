@@ -1,34 +1,72 @@
 {% extends "base.html" %}
 
-{% block title %}CouchCraft AI Front Page{% endblock title %}
+{% block title %}CouchCraft AI - Home{% endblock %}
+
+{% block css %}
+<style>
+  .hero {
+    min-height: 70vh;
+    background: linear-gradient(rgba(255,255,255,0.5), rgba(255,255,255,0.5)), url('https://divaniliving.it/wp-content/uploads/2024/10/delta-salotti-kipling-immagine-evidenza.webp') center/cover no-repeat;
+  }
+  .btn-lg {
+    min-width: 200px;
+  }
+  .feature-icon {
+    color: #e68d57;
+  }
+  .button-background {
+    background: linear-gradient(180deg, #bf4f32, #7e2828);
+    color: white;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<!-- Welcome Section -->
-<section class="bg-dark text-white text-center py-5">
+
+<!-- Hero Section -->
+<section class="hero text-center py-5 d-flex align-items-center">
   <div class="container">
-    <h1 class="display-4">Welcome to CouchCraft AI!</h1>
-    <p class="lead">Craft your own comfort.</p>
+    <h1 class="display-3 mb-3">Welcome to CouchCraft AI!</h1>
+    <p class="lead mb-4"><strong>Craft your own comfort with AI-generated images and personalized LoRA training.</strong></p>
+    <div class="d-flex justify-content-center gap-3">
+      <a href="#" class="btn btn-light btn-lg button-background">Generate Your Image</a>
+      <a href="#" class="btn btn-light btn-lg">Train Your LoRA</a>
+    </div>
   </div>
 </section>
 
-<!-- About Us Section -->
+<!-- About Section -->
 <section class="py-5 bg-light">
   <div class="container">
     <h2 class="text-center mb-4">Who We Are</h2>
-    <p class="text-center">
-      In this site you can generate images with AI and train your own LoRA models to personalize your creations. Unleash your creativity and bring your ideas to life with CouchCraft AI!
+    <p class="text-center fs-5">
+      CouchCraft AI is your space to unleash creativity! Generate stunning images with AI and train your own LoRA models to make your creations unique. Start exploring today and bring your ideas to life.
     </p>
   </div>
 </section>
 
-<!-- Login / Register Section -->
-<section class="py-5 text-center">
+<!-- Features Section -->
+<section class="py-5">
   <div class="container">
-    <h2 class="mb-4">Join Us</h2>
-    <div class="d-flex justify-content-center gap-3">
-      <a href="{% url 'login' %}" class="btn btn-primary btn-lg">Generate your image</a>
-      <a href="{% url 'register' %}" class="btn btn-outline-primary btn-lg">Train your Lora</a>
+    <h2 class="text-center mb-4">Why CouchCraft AI?</h2>
+    <div class="row text-center">
+      <div class="col-md-4 mb-3">
+        <i class="fas fa-brain fa-3x mb-2 feature-icon"></i>
+        <h5>AI-Powered</h5>
+        <p>Create images effortlessly with advanced AI models.</p>
+      </div>
+      <div class="col-md-4 mb-3">
+        <i class="fas fa-cogs fa-3x mb-2 feature-icon"></i>
+        <h5>Custom LoRA Training</h5>
+        <p>Train your models and personalize your creations.</p>
+      </div>
+      <div class="col-md-4 mb-3">
+        <i class="fas fa-paint-brush fa-3x mb-2 feature-icon"></i>
+        <h5>Creative Freedom</h5>
+        <p>Bring your ideas to life with full creative control.</p>
+      </div>
     </div>
   </div>
 </section>
-{% endblock content %}
+
+{% endblock %}
