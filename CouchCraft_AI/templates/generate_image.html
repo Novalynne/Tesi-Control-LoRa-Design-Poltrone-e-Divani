@@ -25,6 +25,9 @@
       {% csrf_token %}
       {{ form|crispy }}
 
+      <!-- Campo nascosto per salvare il canvas modificato -->
+      <input type="hidden" id="canvasEdited" name="canvasEdited">
+
       <div class="text-center mt-3">
         <button class="btn btn-primary btn-lg" type="submit">
           Generate Image
@@ -53,7 +56,7 @@
   <div id="editorSection" class="mt-5 text-center" style="display:none;">
     <h3>Modify your Canny/Hed Guide Image</h3>
 
-    <canvas id="editCanvas" width="512" height="512"></canvas>
+    <canvas id="editCanvas"></canvas>
 
     <div class="mt-3">
       <button type="button" id="drawModeBtn" class="btn btn-success btn-sm">✏️ Draw</button>
@@ -66,15 +69,17 @@
 
 </div>
 
-
-
-<!-- JAVASCRIPT -->
 <script>
   document.addEventListener("DOMContentLoaded", function () {
+    const MAX_WIDTH = 1024;
+    const MAX_HEIGHT = 1024;
+
     const imageInput = document.getElementById("id_input_image");
     const editorSection = document.getElementById("editorSection");
     const canvas = document.getElementById("editCanvas");
     const ctx = canvas.getContext("2d");
+    const canvasHiddenInput = document.getElementById("canvasEdited");
+    const form = document.getElementById("imageForm");
 
     let drawing = false;
     let mode = "draw";
@@ -84,15 +89,9 @@
     const drawModeBtn = document.getElementById("drawModeBtn");
     const eraseModeBtn = document.getElementById("eraseModeBtn");
 
-    // Cambia dimensione del pennello
-    brushInput.addEventListener("input", () => {
-      brushSize = parseInt(brushInput.value);
-    });
-
-    // Bottoni modalità
+    brushInput.addEventListener("input", () => brushSize = parseInt(brushInput.value));
     drawModeBtn.addEventListener("click", () => mode = "draw");
     eraseModeBtn.addEventListener("click", () => mode = "erase");
-
 
     // --- CARICAMENTO E PREVIEW ---
     if (imageInput) {
@@ -105,7 +104,6 @@
         original.src = URL.createObjectURL(file);
         original.style.display = "block";
 
-        // Prepara AJAX
         const formData = new FormData();
         formData.append("image", file);
 
@@ -121,51 +119,58 @@
                     combinedPreview.src = data.combined;
                     combinedPreview.style.display = "block";
 
-                    // Quando HED è caricato → mostra editor + disegna l'immagine sul canvas
                     combinedPreview.onload = function () {
                       editorSection.style.display = "block";
 
-                      // ridisegna HED nel canvas
-                      ctx.clearRect(0, 0, canvas.width, canvas.height);
-                      ctx.drawImage(combinedPreview, 0, 0, canvas.width, canvas.height);
+                      let w = combinedPreview.naturalWidth;
+                      let h = combinedPreview.naturalHeight;
+
+                      // Mantieni proporzioni senza superare il massimo
+                      if (w > MAX_WIDTH || h > MAX_HEIGHT) {
+                        const ratio = Math.min(MAX_WIDTH / w, MAX_HEIGHT / h);
+                        w = Math.round(w * ratio);
+                        h = Math.round(h * ratio);
+                      }
+
+                      canvas.width = w;
+                      canvas.height = h;
+                      canvas.style.width = w + "px";
+                      canvas.style.height = h + "px";
+
+                      ctx.clearRect(0, 0, w, h);
+                      ctx.drawImage(combinedPreview, 0, 0, w, h);
                     };
                   }
                 });
       });
     }
 
-
     // --- SISTEMA DI DISEGNO ---
     function drawPoint(x, y) {
-      if (mode === "draw") {
-        ctx.globalCompositeOperation = "source-over";
-        ctx.fillStyle = "white";   // Bianco per disegnare
-      } else {
-        ctx.globalCompositeOperation = "source-over";
-        ctx.fillStyle = "black";   // Nero per cancellare
-      }
-
       ctx.beginPath();
       ctx.arc(x, y, brushSize, 0, Math.PI * 2);
+      if (mode === "draw") {
+        ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = "white";
+      } else {
+        ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = "black";
+      }
       ctx.fill();
     }
 
-    // Mouse
     canvas.addEventListener("mousedown", () => drawing = true);
     canvas.addEventListener("mouseup", () => { drawing = false; ctx.beginPath(); });
     canvas.addEventListener("mouseout", () => drawing = false);
-
     canvas.addEventListener("mousemove", (e) => {
       if (!drawing) return;
       const rect = canvas.getBoundingClientRect();
       drawPoint(e.clientX - rect.left, e.clientY - rect.top);
     });
 
-    // Touch
     canvas.addEventListener("touchstart", () => drawing = true);
     canvas.addEventListener("touchend", () => { drawing = false; ctx.beginPath(); });
     canvas.addEventListener("touchcancel", () => drawing = false);
-
     canvas.addEventListener("touchmove", (e) => {
       if (!drawing) return;
       e.preventDefault();
@@ -173,7 +178,10 @@
       drawPoint(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
     });
 
+    // --- Salva il canvas modificato prima dell'invio ---
+    form.addEventListener("submit", function() {
+      canvasHiddenInput.value = canvas.toDataURL("image/png");
+    });
   });
 </script>
-
 {% endblock %}

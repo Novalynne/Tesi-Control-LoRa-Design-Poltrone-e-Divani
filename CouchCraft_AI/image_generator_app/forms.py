@@ -16,7 +16,8 @@ class ImageGenerationForm(forms.Form):
     negative_prompt = forms.CharField(
         label="Negative Prompt",
         widget=forms.Textarea(attrs={"rows": 2}),
-        required=False
+        required=True,
+        initial="deformed, distorted, sketch, blurry, cartoon, colored background"
     )
 
     model_choice = forms.ChoiceField(
