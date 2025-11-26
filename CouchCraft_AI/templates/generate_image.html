@@ -4,18 +4,13 @@
 {% block title %}Generate Image{% endblock %}
 {% block css %}
 <style>
-  .asteriskField {
-    display: none;
-  }
+  .asteriskField { display: none; }
+  label { font-weight: bold; }
+  .helptext, .form-text, .text-muted { display: none !important; }
 
-  label {
-    font-weight: bold;
-  }
-
-  .helptext,
-  .form-text,
-  .text-muted {
-    display: none !important;
+  #editCanvas {
+    border: 2px solid #333;
+    cursor: crosshair;
   }
 </style>
 {% endblock %}
@@ -46,6 +41,7 @@
         <img id="originalPreview" src="" class="img-fluid border" style="max-height: 300px; display:none;">
         <p class="text-muted">Original Image</p>
       </div>
+
       <div class="col-md-6 text-center">
         <img id="combinedPreview" src="" class="img-fluid border" style="max-height: 300px; display:none;">
         <p class="text-muted">Canny / HED</p>
@@ -53,24 +49,63 @@
     </div>
   </div>
 
+  <!-- CANVAS EDITOR -->
+  <div id="editorSection" class="mt-5 text-center" style="display:none;">
+    <h3>Modify your Canny/Hed Guide Image</h3>
+
+    <canvas id="editCanvas" width="512" height="512"></canvas>
+
+    <div class="mt-3">
+      <button type="button" id="drawModeBtn" class="btn btn-success btn-sm">✏️ Draw</button>
+      <button type="button" id="eraseModeBtn" class="btn btn-danger btn-sm">🧹 Erase</button>
+
+      <label class="ms-3 fw-bold">Brush Dimension:</label>
+      <input id="brushSize" type="range" min="2" max="40" value="5">
+    </div>
+  </div>
+
 </div>
 
-<!-- JAVASCRIPT per preview live -->
-<script>
-  document.addEventListener("DOMContentLoaded", function() {
-    const imageInput = document.getElementById("id_input_image");
 
+
+<!-- JAVASCRIPT -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const imageInput = document.getElementById("id_input_image");
+    const editorSection = document.getElementById("editorSection");
+    const canvas = document.getElementById("editCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let drawing = false;
+    let mode = "draw";
+    let brushSize = 5;
+
+    const brushInput = document.getElementById("brushSize");
+    const drawModeBtn = document.getElementById("drawModeBtn");
+    const eraseModeBtn = document.getElementById("eraseModeBtn");
+
+    // Cambia dimensione del pennello
+    brushInput.addEventListener("input", () => {
+      brushSize = parseInt(brushInput.value);
+    });
+
+    // Bottoni modalità
+    drawModeBtn.addEventListener("click", () => mode = "draw");
+    eraseModeBtn.addEventListener("click", () => mode = "erase");
+
+
+    // --- CARICAMENTO E PREVIEW ---
     if (imageInput) {
-      imageInput.addEventListener("change", function(event) {
+      imageInput.addEventListener("change", function (event) {
         const file = event.target.files[0];
         if (!file) return;
 
-        // Mostra immagine originale
+        // Mostra anteprima originale
         const original = document.getElementById("originalPreview");
         original.src = URL.createObjectURL(file);
         original.style.display = "block";
 
-        // Invia AJAX a generate_preview
+        // Prepara AJAX
         const formData = new FormData();
         formData.append("image", file);
 
@@ -82,13 +117,62 @@
                 .then(response => response.json())
                 .then(data => {
                   if (data.status === "ok") {
-                    const combined = document.getElementById("combinedPreview");
-                    combined.src = data.combined;
-                    combined.style.display = "block";
+                    const combinedPreview = document.getElementById("combinedPreview");
+                    combinedPreview.src = data.combined;
+                    combinedPreview.style.display = "block";
+
+                    // Quando HED è caricato → mostra editor + disegna l'immagine sul canvas
+                    combinedPreview.onload = function () {
+                      editorSection.style.display = "block";
+
+                      // ridisegna HED nel canvas
+                      ctx.clearRect(0, 0, canvas.width, canvas.height);
+                      ctx.drawImage(combinedPreview, 0, 0, canvas.width, canvas.height);
+                    };
                   }
                 });
       });
     }
+
+
+    // --- SISTEMA DI DISEGNO ---
+    function drawPoint(x, y) {
+      if (mode === "draw") {
+        ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = "white";   // Bianco per disegnare
+      } else {
+        ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = "black";   // Nero per cancellare
+      }
+
+      ctx.beginPath();
+      ctx.arc(x, y, brushSize, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Mouse
+    canvas.addEventListener("mousedown", () => drawing = true);
+    canvas.addEventListener("mouseup", () => { drawing = false; ctx.beginPath(); });
+    canvas.addEventListener("mouseout", () => drawing = false);
+
+    canvas.addEventListener("mousemove", (e) => {
+      if (!drawing) return;
+      const rect = canvas.getBoundingClientRect();
+      drawPoint(e.clientX - rect.left, e.clientY - rect.top);
+    });
+
+    // Touch
+    canvas.addEventListener("touchstart", () => drawing = true);
+    canvas.addEventListener("touchend", () => { drawing = false; ctx.beginPath(); });
+    canvas.addEventListener("touchcancel", () => drawing = false);
+
+    canvas.addEventListener("touchmove", (e) => {
+      if (!drawing) return;
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      drawPoint(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+    });
+
   });
 </script>
 
