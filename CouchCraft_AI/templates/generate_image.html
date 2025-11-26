@@ -41,18 +41,16 @@
   <!-- Preview section -->
   <div class="mt-4 text-center">
     <h3>Preview Canny / HED</h3>
-    {% if hed_preview_url %}
     <div class="row mt-4">
       <div class="col-md-6 text-center">
         <img id="originalPreview" src="" class="img-fluid border" style="max-height: 300px; display:none;">
+        <p class="text-muted">Original Image</p>
       </div>
       <div class="col-md-6 text-center">
         <img id="combinedPreview" src="" class="img-fluid border" style="max-height: 300px; display:none;">
+        <p class="text-muted">Canny / HED</p>
       </div>
     </div>
-    {% else %}
-    <p class="text-muted">No preview yet.</p>
-    {% endif %}
   </div>
 
 </div>
@@ -60,7 +58,6 @@
 <!-- JAVASCRIPT per preview live -->
 <script>
   document.addEventListener("DOMContentLoaded", function() {
-    // Cambia "id_input_image" con l'ID effettivo del campo immagine nel tuo form
     const imageInput = document.getElementById("id_input_image");
 
     if (imageInput) {
