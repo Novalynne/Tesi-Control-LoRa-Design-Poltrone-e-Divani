@@ -18,6 +18,10 @@
     background: linear-gradient(180deg, #bf4f32, #7e2828);
     color: white;
   }
+  .button-background:hover {
+    background: linear-gradient(180deg, #e66060, #e6785b);
+    color: white;
+  }
 </style>
 {% endblock %}
 
@@ -29,7 +33,7 @@
     <h1 class="display-3 mb-3">Welcome to CouchCraft AI!</h1>
     <p class="lead mb-4"><strong>Craft your own comfort with AI-generated images and personalized LoRA training.</strong></p>
     <div class="d-flex justify-content-center gap-3">
-      <a href="#" class="btn btn-light btn-lg button-background">Generate Your Image</a>
+      <a href="{% url 'generate_image' %}" class="btn btn-light btn-lg button-background">Generate Your Image</a>
       <a href="#" class="btn btn-light btn-lg">Train Your LoRA</a>
     </div>
   </div>

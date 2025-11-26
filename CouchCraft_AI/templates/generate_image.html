@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Generate Image{% endblock %}
+{% block css %}
+<style>
+  .asteriskField {
+    display: none;
+  }
+
+  label {
+    font-weight: bold;
+  }
+
+  .helptext,
+  .form-text,
+  .text-muted {
+    display: none !important;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <h1 class="mt-4 mb-4 text-center">AI Image Generator</h1>
+
+  <div class="card shadow p-4">
+    <form id="imageForm" method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ form|crispy }}
+
+      <div class="text-center mt-3">
+        <button class="btn btn-primary btn-lg" type="submit">
+          Generate Image
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Preview section -->
+  <div class="mt-4 text-center">
+    <h3>Preview Canny / HED</h3>
+    {% if hed_preview_url %}
+    <div class="row mt-4">
+      <div class="col-md-6 text-center">
+        <img id="originalPreview" src="" class="img-fluid border" style="max-height: 300px; display:none;">
+      </div>
+      <div class="col-md-6 text-center">
+        <img id="combinedPreview" src="" class="img-fluid border" style="max-height: 300px; display:none;">
+      </div>
+    </div>
+    {% else %}
+    <p class="text-muted">No preview yet.</p>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- JAVASCRIPT per preview live -->
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Cambia "id_input_image" con l'ID effettivo del campo immagine nel tuo form
+    const imageInput = document.getElementById("id_input_image");
+
+    if (imageInput) {
+      imageInput.addEventListener("change", function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Mostra immagine originale
+        const original = document.getElementById("originalPreview");
+        original.src = URL.createObjectURL(file);
+        original.style.display = "block";
+
+        // Invia AJAX a generate_preview
+        const formData = new FormData();
+        formData.append("image", file);
+
+        fetch("{% url 'generate_preview' %}", {
+          method: "POST",
+          headers: { "X-CSRFToken": "{{ csrf_token }}" },
+          body: formData
+        })
+                .then(response => response.json())
+                .then(data => {
+                  if (data.status === "ok") {
+                    const combined = document.getElementById("combinedPreview");
+                    combined.src = data.combined;
+                    combined.style.display = "block";
+                  }
+                });
+      });
+    }
+  });
+</script>
+
+{% endblock %}
