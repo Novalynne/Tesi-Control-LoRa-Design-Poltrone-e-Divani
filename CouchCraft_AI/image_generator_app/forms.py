@@ -10,6 +10,7 @@ class ImageGenerationForm(forms.Form):
 
     prompt = forms.CharField(
         label="Prompt",
+        required=True,
         widget=forms.Textarea(attrs={"rows": 3})
     )
 

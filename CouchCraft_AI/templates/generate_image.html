@@ -109,7 +109,7 @@
 
         fetch("{% url 'generate_preview' %}", {
           method: "POST",
-          headers: { "X-CSRFToken": "{{ csrf_token }}" },
+          headers: { "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value },
           body: formData
         })
                 .then(response => response.json())
