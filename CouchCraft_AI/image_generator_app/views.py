@@ -1,11 +1,19 @@
+from io import BytesIO
+
 from django.shortcuts import render
 from .forms import ImageGenerationForm
 import cv2
 import numpy as np
 import base64
+import requests
 from django.http import JsonResponse
 from controlnet_aux.hed import HEDdetector
 from PIL import Image
+import tempfile
+from .task import generate_image_task
+from django.shortcuts import render
+from celery.result import AsyncResult
+
 
 # CARICAMENTO MODEL HED
 hed_detector = HEDdetector.from_pretrained("lllyasviel/Annotators")
@@ -58,21 +66,69 @@ def generate_preview(request):
         "combined": f"data:image/png;base64,{combined_b64}"
     })
 
+def check_task_status(request):
+    task_id = request.GET.get("task_id")
+    if not task_id:
+        return JsonResponse({"status": "error", "message": "No task_id"})
+
+    result = AsyncResult(task_id)
+
+    if result.ready():
+        image_url = result.result  # il percorso salvato da generate_image_task
+        return JsonResponse({"status": "ready", "result": image_url})
+    else:
+        return JsonResponse({"status": "pending"})
+
+POD_URL = "https://ga4nj7qaxm1hu4-3000.proxy.runpod.net/generate"  # URL del tuo pod
 
 def generate_image_view(request):
-    hed_preview_url = None  # poi lo userai per mostrare la canny/HED
+    generated_image_base64 = None  # Base64 dell'immagine generata
 
     if request.method == "POST":
         form = ImageGenerationForm(request.POST, request.FILES)
-
         if form.is_valid():
-            # Qui invierai i dati a Celery + Lambda
-            pass
+            canvas_base64 = request.POST.get("canvasEdited")
+            if canvas_base64:
+                try:
+                    # ---- Decodifica base64 inviato dal canvas ----
+                    format, imgstr = canvas_base64.split(";base64,")
+                    image_bytes = base64.b64decode(imgstr)
+                    canvas_file = BytesIO(image_bytes)
+                    canvas_file.name = "canvas.png"
+
+                    # ---- Prepara dati da inviare al pod ----
+                    files = {"canvas_image": ("canvas.png", canvas_file, "image/png")}
+                    data = {
+                        "prompt": form.cleaned_data["prompt"],
+                        "negative_prompt": form.cleaned_data.get("negative_prompt", ""),
+                        "model_choice": form.cleaned_data["model_choice"],
+                        "lora_weight": form.cleaned_data["lora_weight"],
+                        "guidance_scale": form.cleaned_data["guidance_scale"],
+                        "conditioning_scale": form.cleaned_data["conditioning_scale"],
+                        "num_steps": form.cleaned_data["num_steps"],
+                    }
+
+                    # ---- Chiamata diretta al pod RunPod ----
+                    response = requests.post(POD_URL, data=data, files=files)
+                    response.raise_for_status()
+                    result = response.json()
+
+                    # ---- Prendi Base64 dell'immagine generata ----
+                    img_base64 = result.get("image_base64")
+                    if img_base64:
+                        generated_image_base64 = img_base64
+
+                except Exception as e:
+                    return render(request, "generate_image.html", {
+                        "form": form,
+                        "error_message": f"Errore durante la generazione: {e}",
+                        "generated_image_base64": None
+                    })
     else:
         form = ImageGenerationForm()
 
+    # ---- Render template con immagine (Base64) ----
     return render(request, "generate_image.html", {
         "form": form,
-        "hed_preview_url": hed_preview_url
+        "generated_image_base64": generated_image_base64
     })
-
