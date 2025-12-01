@@ -1,8 +1,8 @@
 from django import forms
 
 MODEL_CHOICES = [
-    ('realistic', 'Realistic Vision'),
-    ('sd15', 'Stable Diffusion 1.5'),
+    ("SG161222/Realistic_Vision_V4.0_noVAE", "Realistic Vision 4.0"),
+    ("runwayml/stable-diffusion-v1-5", "Stable Diffusion 1.5"),
 ]
 
 class ImageGenerationForm(forms.Form):
@@ -23,7 +23,15 @@ class ImageGenerationForm(forms.Form):
 
     model_choice = forms.ChoiceField(
         label="Model",
-        choices=MODEL_CHOICES
+        choices=MODEL_CHOICES,
+        required=True
+    )
+
+    lora_weight = forms.CharField(
+        label="LoRA Weights (Public on HuggingFace)",
+        required=True,
+        initial="urllamadrama/furniture_control_lora_realistic_vision",
+        help_text="Format: ursername/lora_weight_name"
     )
 
     guidance_scale = forms.FloatField(
