@@ -67,10 +67,10 @@
     </div>
   </div>
 
-  <div id="previewContainer" style="margin-top:20px;">
+  <div id="previewContainer" class="text-center" style="margin-top:20px;">
     {% if generated_image_base64 %}
     <h3>Immagine generata:</h3>
-    <img src="data:image/png;base64,{{ generated_image_base64 }}" />
+    <img src="data:image/png;base64,{{ generated_image_base64 }}" class="img-fluid border" style="max-height: 500px;"/>
     {% endif %}
 
     {% if error_message %}
@@ -194,35 +194,6 @@
       canvasHiddenInput.value = canvas.toDataURL("image/png");
     });
 
-    // --- POLLING CELERY PER MOSTRARE IMMAGINE GENERATA ---
-    let celeryTaskId = "{{ celery_task_id|default:'' }}"; // passato dal view
-
-    if (celeryTaskId) {
-      function checkTaskStatus() {
-        fetch("{% url 'check_task_status' %}?task_id=" + celeryTaskId)
-                .then(response => response.json())
-                .then(data => {
-                  if (data.status === "ready") {
-                    let img = document.getElementById("generatedImage");
-                    if (!img) {
-                      img = document.createElement("img");
-                      img.id = "generatedImage";
-                      img.style.maxWidth = "500px";
-                      document.getElementById("previewContainer").innerHTML = "";
-                      document.getElementById("previewContainer").appendChild(img);
-                    }
-                    img.src = data.result;
-                    document.getElementById("loadingText")?.remove();
-                  } else {
-                    setTimeout(checkTaskStatus, 2000); // riprova tra 2 secondi
-                  }
-                })
-                .catch(err => console.error(err));
-      }
-
-      // Avvia il polling
-      checkTaskStatus();
-    }
   });
 </script>
 {% endblock %}

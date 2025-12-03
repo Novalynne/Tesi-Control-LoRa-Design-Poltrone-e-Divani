@@ -6,125 +6,50 @@
 <style>
     .asteriskField { display: none; }
     label { font-weight: bold; }
-
-    #editCanvas {
-        border: 2px solid #333;
-        cursor: crosshair;
-    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container">
 
-    <!-- TITLE -->
     <div class="text-center mt-4 mb-4">
         <h1 class="fw-bold">Train a LoRA Model</h1>
         <p class="text-muted">
-            Configure your LoRA training job by providing a name, base model and a public HuggingFace dataset.
+            Configure your LoRA training job by providing a name, base model, HuggingFace dataset, Hub model ID, and Hub token.
         </p>
     </div>
 
-    <!-- TRAINING FORM (only when job_id is not set) -->
-    {% if not job_id %}
+    {% if not training_started %}
 
+    <!-- Form -->
     <div class="card shadow-sm mx-auto" style="max-width: 650px;">
         <div class="card-body">
-
-            <form method="post" enctype="multipart/form-data">
+            <form method="post">
                 {% csrf_token %}
                 {{ form|crispy }}
-
-                <button type="submit" class="btn btn-primary w-100 mt-3">
-                    Start Training
-                </button>
+                <button type="submit" class="btn btn-primary w-100 mt-3">Start Training</button>
             </form>
-
         </div>
     </div>
 
     {% else %}
 
-    <!-- TRAINING STATUS (if job started) -->
-    <div id="training-container" class="card shadow-sm mx-auto" style="max-width: 700px;">
-        <div class="card-body">
-
-            <h3 class="fw-bold mb-3">Training Progress</h3>
-
-            <!-- Status -->
-            <p class="mb-1"><strong>Status:</strong> <span id="js-status">Loading…</span></p>
-
-            <!-- Progress bar -->
-            <div class="progress mb-3" style="height: 22px;">
-                <div id="js-bar" class="progress-bar progress-bar-striped progress-bar-animated"
-                     role="progressbar" style="width: 0%;">0%</div>
-            </div>
-
-            <!-- Logs -->
-            <label class="form-label fw-bold">Logs</label>
-            <textarea id="js-log" class="form-control" rows="10" readonly style="font-family: monospace;"></textarea>
-
-            <!-- Buttons -->
-            <div class="mt-4 d-flex gap-3">
-                <button id="js-go-gen" class="btn btn-success w-50" style="display:none;">Use Model</button>
-                <button id="js-retry" class="btn btn-danger w-50" style="display:none;">Retry</button>
-            </div>
-
+    <!-- Message after form -->
+    <div class="card shadow-sm mx-auto mt-4" style="max-width: 650px;">
+        <div class="card-body text-center">
+            <h3 class="fw-bold mb-3">Training Started</h3>
+            <p>Your GPU is starting the training on your LoRA model.</p>
+            <p>You will find your result in your HuggingFace profile at the end of the training:</p>
+            <a href="{{ hf_url }}" target="_blank" class="btn btn-success mt-3">
+                Go to HuggingFace Model
+            </a>
         </div>
     </div>
 
-    <!-- POLLING SCRIPT -->
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const statusEl = document.getElementById("js-status");
-            const logEl = document.getElementById("js-log");
-            const barEl = document.getElementById("js-bar");
-            const goGenBtn = document.getElementById("js-go-gen");
-            const retryBtn = document.getElementById("js-retry");
-
-            const endpoint = "{% url 'trainer_app:status' job_id=job_id %}";
-
-            const poll = () => {
-                fetch(endpoint)
-                    .then(r => r.json())
-                    .then(data => {
-                        // Status
-                        statusEl.textContent = data.status;
-
-                        // Progress
-                        barEl.style.width = data.progress + "%";
-                        barEl.textContent = data.progress + "%";
-
-                        // Logs
-                        logEl.value = data.log;
-
-                        // Success
-                        if (data.status === "completed") {
-                            barEl.classList.remove("progress-bar-animated");
-                            goGenBtn.style.display = "block";
-                            goGenBtn.onclick = () => window.location.href = "/generator/";
-                            return;
-                        }
-
-                        // Fail
-                        if (data.status === "failed") {
-                            barEl.classList.remove("progress-bar-animated");
-                            retryBtn.style.display = "block";
-                            retryBtn.onclick = () => window.location.reload();
-                            return;
-                        }
-
-                        // Continue polling
-                        setTimeout(poll, 1500);
-                    })
-                    .catch(() => setTimeout(poll, 1500));
-            };
-
-            poll();
-        });
-    </script>
-
+    <div style="height: 80px;"></div>
     {% endif %}
 
 </div>
 {% endblock %}
+
+

@@ -1,8 +1,8 @@
 from django import forms
 
 BASE_MODELS = [
-    ("SD 1.5 (runwayml)", "runwayml/stable-diffusion-v1-5"),
-    ("Realistic Vision 4.0", "SG161222/Realistic_Vision_V4.0_noVAE"),
+    ("SG161222/Realistic_Vision_V4.0_noVAE", "Realistic Vision 4.0"),
+    ("runwayml/stable-diffusion-v1-5", "Stable Diffusion 1.5"),
 ]
 
 class TrainingForm(forms.Form):
@@ -24,5 +24,19 @@ class TrainingForm(forms.Form):
         label="Public HuggingFace Dataset ID",
         max_length=128,
         help_text="Example: username/my-dataset",
+        required=True
+    )
+
+    hub_token = forms.CharField(
+        label="HuggingFace Token To Push Model",
+        max_length=128,
+        widget=forms.PasswordInput,
+        required=True
+    )
+
+    hub_model_id = forms.CharField(
+        label="HuggingFace Model Id to Push",
+        max_length=128,
+        help_text="Example: username/my-lora-model",
         required=True
     )

@@ -10,9 +10,7 @@ from django.http import JsonResponse
 from controlnet_aux.hed import HEDdetector
 from PIL import Image
 import tempfile
-from .task import generate_image_task
 from django.shortcuts import render
-from celery.result import AsyncResult
 
 
 # CARICAMENTO MODEL HED
@@ -65,19 +63,6 @@ def generate_preview(request):
         "status": "ok",
         "combined": f"data:image/png;base64,{combined_b64}"
     })
-
-def check_task_status(request):
-    task_id = request.GET.get("task_id")
-    if not task_id:
-        return JsonResponse({"status": "error", "message": "No task_id"})
-
-    result = AsyncResult(task_id)
-
-    if result.ready():
-        image_url = result.result  # il percorso salvato da generate_image_task
-        return JsonResponse({"status": "ready", "result": image_url})
-    else:
-        return JsonResponse({"status": "pending"})
 
 POD_URL = "https://ga4nj7qaxm1hu4-3000.proxy.runpod.net/generate"  # URL del tuo pod
 

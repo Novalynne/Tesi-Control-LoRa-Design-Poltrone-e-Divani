@@ -5,7 +5,7 @@ from celery import Celery
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'CouchCraft_AI.settings')
 
-app = Celery('ouchCraft_AI')
+app = Celery('CouchCraft_AI')
 
 # Carica configurazione da settings.py con prefisso CELERY
 app.config_from_object('django.conf:settings', namespace='CELERY')
