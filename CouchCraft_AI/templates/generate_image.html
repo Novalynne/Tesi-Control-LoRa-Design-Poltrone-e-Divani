@@ -23,7 +23,25 @@
   <div class="card shadow p-4">
     <form id="imageForm" method="POST" enctype="multipart/form-data">
       {% csrf_token %}
-      {{ form|crispy }}
+
+      <!-- Tutti i campi base del form -->
+      {{ form.input_image|as_crispy_field }}
+      {{ form.prompt|as_crispy_field }}
+      {{ form.model_choice|as_crispy_field }}
+      {{ form.num_steps|as_crispy_field }}
+
+      <!-- Pulsante per aprire le opzioni avanzate -->
+      <button class="btn btn-secondary btn-sm mt-2 mb-3" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFields">
+        Advanced Options ⚙️
+      </button>
+
+      <!-- Campi avanzati nascosti -->
+      <div class="collapse" id="advancedFields">
+        {{ form.negative_prompt|as_crispy_field }}
+        {{ form.lora_weight|as_crispy_field }}
+        {{ form.guidance_scale|as_crispy_field }}
+        {{ form.conditioning_scale|as_crispy_field }}
+      </div>
 
       <!-- Campo nascosto per salvare il canvas modificato -->
       <input type="hidden" id="canvasEdited" name="canvasEdited">
@@ -36,23 +54,28 @@
     </form>
   </div>
 
+
   <!-- Preview section -->
   <div class="mt-4 text-center">
     <h3>Preview Canny / HED</h3>
-    <div class="row mt-4">
-      <div class="col-md-6 text-center">
-        <img id="originalPreview" src="" class="img-fluid border" style="max-height: 300px; display:none;">
-        <p class="text-muted">Original Image</p>
+    <div class="row mt-4 justify-content-center align-items-center text-center">
+      <div class="col-md-6 justify-content-center align-items-center text-center">
+        <div class="text-center justify-content-center align-items-center">
+          <img id="originalPreview" src="" class="img-fluid border" style="max-height: 300px; display:none;">
+          <p class="text-muted">Original Image</p>
+        </div>
       </div>
 
-      <div class="col-md-6 text-center">
-        <img id="combinedPreview" src="" class="img-fluid border" style="max-height: 300px; display:none;">
-        <p class="text-muted">Canny / HED</p>
+      <div class="col-md-6 justify-content-center align-items-center text-center">
+        <div class="text-center justify-content-center align-items-center">
+          <img id="combinedPreview" src="" class="img-fluid border" style="max-height: 300px; display:none;">
+          <p class="text-muted">Canny / HED</p>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- CANVAS EDITOR -->
+  <!-- Canvas editor -->
   <div id="editorSection" class="mt-5 text-center" style="display:none;">
     <h3>Modify your Canny/Hed Guide Image</h3>
 
@@ -68,14 +91,26 @@
   </div>
 
   <div id="previewContainer" class="text-center" style="margin-top:20px;">
-    {% if generated_image_base64 %}
-    <h3>Generated Image:</h3>
-    <img src="data:image/png;base64,{{ generated_image_base64 }}" class="img-fluid border" style="max-height: 500px;"/>
-    {% endif %}
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="text-center" style="display:none; margin-top:20px;">
+      <div class="spinner-border text-primary" role="status" style="width: 4rem; height: 4rem;">
+      </div>
+      <p class="mt-2">Generating image...</p>
+    </div>
 
-    {% if error_message %}
-    <p style="color:red">{{ error_message }}</p>
-    {% endif %}
+    <!-- Risultato con AJAX quindi senza ricaricare la pagina  -->
+    <div id="resultImageContainer" class="text-center mt-4"></div>
+
+    <!-- Risultato senza AJAX quindi con ricaricamento della pagina  -->
+    <div id="staticResultContainer" class="text-center mt-4">
+      {% if generated_image_base64 %}
+      <h3>Generated Image:</h3>
+      <img src="data:image/png;base64,{{ generated_image_base64 }}" class="img-fluid border" style="max-height: 500px;"/>
+      {% endif %}
+      {% if error_message %}
+      <p style="color:red">{{ error_message }}</p>
+      {% endif %}
+    </div>
   </div>
 
 </div>
@@ -192,6 +227,67 @@
     // --- Salva il canvas modificato prima dell'invio ---
     form.addEventListener("submit", function() {
       canvasHiddenInput.value = canvas.toDataURL("image/png");
+    });
+
+  });
+</script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+
+    const form = document.getElementById("imageForm");
+    const spinner = document.getElementById("loadingSpinner");
+    const resultContainer = document.getElementById("resultImageContainer");
+    const canvas = document.getElementById("editCanvas");
+    const canvasHiddenInput = document.getElementById("canvasEdited");
+
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();  // Previene il ricaricamento della pagina
+
+      // Salva il canvas in base64 nel campo hidden
+      canvasHiddenInput.value = canvas.toDataURL("image/png");
+
+      // Prepara formData normalmente
+      let formData = new FormData(form);
+
+      // Pulisce eventuali immagini precedenti
+      resultContainer.innerHTML = "";
+
+      // Mostra spinner
+      spinner.style.display = "block";
+
+      try {
+        const response = await fetch("", {
+          method: "POST",
+          body: formData
+        });
+
+        const html = await response.text();
+
+        // Creiamo un parser DOM per estrarre SOLO la base64 dal render della view
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+
+        const imgTag = doc.querySelector("#staticResultContainer img");
+
+        if (imgTag) {
+          resultContainer.innerHTML = `
+                    <h3>Generated Image:</h3>
+                    <img src="${imgTag.src}" class="img-fluid border" style="max-height: 500px;">
+                `;
+        } else {
+          resultContainer.innerHTML = `
+                    <p class="text-danger">Error in generating your image.</p>
+                `;
+        }
+
+      } catch (err) {
+        resultContainer.innerHTML = `
+                <p class="text-danger">Error in your request: ${err}</p>
+            `;
+      }
+
+      // Nasconde spinner
+      spinner.style.display = "none";
     });
 
   });
