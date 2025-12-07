@@ -2,6 +2,7 @@ from io import BytesIO
 
 from django.shortcuts import render
 from .forms import ImageGenerationForm
+from .task import generate_image_task
 import cv2
 import numpy as np
 import base64
@@ -11,6 +12,7 @@ from controlnet_aux.hed import HEDdetector
 from PIL import Image
 import tempfile
 from django.shortcuts import render
+from celery.result import AsyncResult
 
 
 # CARICAMENTO MODEL HED
@@ -66,6 +68,7 @@ def generate_preview(request):
 
 POD_URL = "https://ga4nj7qaxm1hu4-3000.proxy.runpod.net/generate"  # URL del tuo pod
 
+'''
 def generate_image_view(request):
     generated_image_base64 = None  # Base64 dell'immagine generata
 
@@ -117,3 +120,46 @@ def generate_image_view(request):
         "form": form,
         "generated_image_base64": generated_image_base64
     })
+'''
+
+def generate_image_view(request):
+    task_id = None
+
+    if request.method == "POST" and request.headers.get("x-requested-with") == "XMLHttpRequest":
+        form = ImageGenerationForm(request.POST, request.FILES)
+        if form.is_valid():
+            canvas_base64 = request.POST.get("canvasEdited")
+
+            data = {
+                "prompt": form.cleaned_data["prompt"],
+                "negative_prompt": form.cleaned_data.get("negative_prompt", ""),
+                "model_choice": form.cleaned_data["model_choice"],
+                "lora_weight": form.cleaned_data["lora_weight"],
+                "guidance_scale": form.cleaned_data["guidance_scale"],
+                "conditioning_scale": form.cleaned_data["conditioning_scale"],
+                "num_steps": form.cleaned_data["num_steps"],
+            }
+
+            # → LANCIA TASK CELERY
+            task = generate_image_task.delay(data, canvas_base64)
+            task_id = task.id
+            return JsonResponse({"status": "ok", "task_id": task_id})
+        else:
+            return JsonResponse({"status": "error", "errors": form.errors})
+    else:
+        form = ImageGenerationForm()
+
+    return render(request, "generate_image.html", {
+        "form": form,
+        "task_id": task_id,
+    })
+
+def check_task_view(request, task_id):
+    task_result = generate_image_task.AsyncResult(task_id)
+
+    if task_result.ready():
+        result = task_result.get()
+        return JsonResponse(result)
+    else:
+        return JsonResponse({"status": "pending"})
+

@@ -233,63 +233,58 @@
 </script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-
     const form = document.getElementById("imageForm");
     const spinner = document.getElementById("loadingSpinner");
     const resultContainer = document.getElementById("resultImageContainer");
-    const canvas = document.getElementById("editCanvas");
     const canvasHiddenInput = document.getElementById("canvasEdited");
 
-    form.addEventListener("submit", async function (e) {
-      e.preventDefault();  // Previene il ricaricamento della pagina
+    form.addEventListener("submit", async function(e) {
+      e.preventDefault();
 
-      // Salva il canvas in base64 nel campo hidden
-      canvasHiddenInput.value = canvas.toDataURL("image/png");
+      // Salva canvas in base64
+      canvasHiddenInput.value = document.getElementById("editCanvas").toDataURL("image/png");
 
-      // Prepara formData normalmente
-      let formData = new FormData(form);
+      const formData = new FormData(form);
 
-      // Pulisce eventuali immagini precedenti
+      spinner.style.display = "block";
       resultContainer.innerHTML = "";
 
-      // Mostra spinner
-      spinner.style.display = "block";
+      // POST AJAX
+      const response = await fetch(form.action || window.location.href, {
+        method: "POST",
+        body: formData,
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+      });
+      const data = await response.json();
 
-      try {
-        const response = await fetch("", {
-          method: "POST",
-          body: formData
-        });
-
-        const html = await response.text();
-
-        // Creiamo un parser DOM per estrarre SOLO la base64 dal render della view
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, "text/html");
-
-        const imgTag = doc.querySelector("#staticResultContainer img");
-
-        if (imgTag) {
-          resultContainer.innerHTML = `
-                    <h3>Generated Image:</h3>
-                    <img src="${imgTag.src}" class="img-fluid border" style="max-height: 500px;">
-                `;
-        } else {
-          resultContainer.innerHTML = `
-                    <p class="text-danger">Error in generating your image.</p>
-                `;
-        }
-
-      } catch (err) {
-        resultContainer.innerHTML = `
-                <p class="text-danger">Error in your request: ${err}</p>
-            `;
+      if (data.status !== "ok") {
+        resultContainer.innerHTML = `<p class="text-danger">Form Error</p>`;
+        spinner.style.display = "none";
+        return;
       }
 
-      // Nasconde spinner
-      spinner.style.display = "none";
-    });
+      const taskId = data.task_id;
 
+      // Polling ogni 2 secondi
+      const interval = setInterval(async () => {
+        const statusResp = await fetch("{% url 'check_task' 'TASKID_PLACEHOLDER' %}".replace('TASKID_PLACEHOLDER', taskId));
+        const statusData = await statusResp.json();
+
+        if (statusData.status === "success" && statusData.image_base64) {
+          clearInterval(interval);
+          resultContainer.innerHTML = `
+                    <h3>Generated Image:</h3>
+                    <img src="data:image/png;base64,${statusData.image_base64}" class="img-fluid border" style="max-height:500px;">
+                `;
+          spinner.style.display = "none";
+        } else if (statusData.status === "error") {
+          clearInterval(interval);
+          resultContainer.innerHTML = `<p class="text-danger">${statusData.message}</p>`;
+          spinner.style.display = "none";
+        }
+      }, 2000);
+    });
   });
 </script>
+
 {% endblock %}
