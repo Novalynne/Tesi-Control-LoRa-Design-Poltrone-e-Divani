@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from .models import TrainingJob
 from .forms import TrainingForm
+from .task import run_training_task
 import time
 
 
@@ -11,6 +12,7 @@ import time
 
 RUNPOD_TRAIN_URL = "https://ga4nj7qaxm1hu4-3000.proxy.runpod.net/train"
 
+'''
 def training_view(request):
     training_started = False
     hf_url = ""
@@ -42,4 +44,45 @@ def training_view(request):
         "form": form,
         "training_started": training_started,
         "hf_url": hf_url,
+    })
+'''
+
+def training_view(request):
+    task_id = None
+    hf_url = None
+
+    if request.method == "POST":
+        form = TrainingForm(request.POST)
+        if form.is_valid():
+            data = {
+                "name": form.cleaned_data['name'],
+                "base_model": form.cleaned_data['base_model'],
+                "steps": form.cleaned_data['steps'],
+                "rank": form.cleaned_data['rank'],
+                "lr": form.cleaned_data['lr'],
+                "huggingFace_dataset": form.cleaned_data['huggingFace_dataset'],
+                "hub_model_id": form.cleaned_data['hub_model_id'],
+                "hub_token": form.cleaned_data['hub_token'],
+            }
+
+            # → LANCIA TASK CELERY
+            task = run_training_task.delay(data)
+            task_id = task.id
+            hf_url = f"https://huggingface.co/{data['hub_model_id']}"
+
+    else:
+        form = TrainingForm()
+
+    # Se task_id arriva come GET, controlliamo lo stato
+    if "task_id" in request.GET:
+        task_id = request.GET["task_id"]
+        async_result = run_training_task.AsyncResult(task_id)
+
+        if async_result.ready():
+            result = async_result.get()
+
+    return render(request, "train.html", {
+        "form": form,
+        "task_id": task_id,
+        "hf_url": hf_url,   # contiene hf_url quando pronto
     })

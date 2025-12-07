@@ -146,8 +146,10 @@ cloudinary.config(
     secure=True
 )
 
-CELERY_BROKER_URL = 'memory://'
-CELERY_RESULT_BACKEND = 'cache+memory://'
+# Celery Configuration
+# command to run celery worker: celery -A CouchCraft_AI worker --pool=solo -l info
+CELERY_BROKER_URL = "redis://default:EEVTDHzPK5ilNJ11sTqiEJ6YBQDKQJnL@redis-14705.c92.us-east-1-3.ec2.cloud.redislabs.com:14705"
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
